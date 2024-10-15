@@ -9,6 +9,19 @@ var screen_size = Vector2(1920, 1080)  # Size of the window/screen
 var angle = 0
 var sight_radius = 125.0
 var directions = []
+var fov = PI / 2
+
+
+func draw_circle_arc_poly(center, radius, angle_from, angle_to, color):
+	var nb_points = 32
+	var points_arc = PackedVector2Array()
+	points_arc.push_back(center)
+	var colors = PackedColorArray([color])
+
+	for i in range(nb_points + 1):
+		var angle_point = deg_to_rad(angle_from + i * (angle_to - angle_from) / nb_points - 90)
+		points_arc.push_back(center + Vector2(cos(angle_point), sin(angle_point)) * radius)
+	draw_polygon(points_arc, colors)
 
 
 func _ready():
@@ -26,22 +39,27 @@ func _ready():
 
 func _draw():
 	# Draw each circle
-	for circle in circles:
-		draw_circle(circle["position"], radius, circle["color"])
-	
-	for circle in circles:
-		draw_circle(circle["position"], sight_radius, Color(1, 1, 1, 0.01))
-	
+	#for circle in circles:
 	for i in range(circles.size()):
 		var circle = circles[i]
+		draw_circle(circle["position"], radius, circle["color"])
+		
+		var from_angle = circle["angle"] - fov / 2
+		var to_angle = circle["angle"] + fov / 2
+		draw_circle_arc_poly(circle["position"], sight_radius, from_angle, to_angle, Color(1, 1, 1, 0.1))
+	
+	
 		for j in range(circles.size()):
 			if i == j:
 				continue
 			
 			var circleToCheck = circles[j]
 			var distanceBetweenCircles = circle["position"].distance_to(circleToCheck["position"])
+			var toCircleToCheck = circleToCheck["position"] - circle["position"]
+			var circleDirection = Vector2(cos(circle["angle"]), sin(circle["angle"]))
+			var angleToCircle = circleDirection.angle_to(toCircleToCheck.normalized())
 			
-			if distanceBetweenCircles < sight_radius:
+			if (distanceBetweenCircles < sight_radius) && (angleToCircle < fov):
 				draw_line(circle["position"], circleToCheck["position"], Color(1, 0, 0))
 
 func _process(delta):
@@ -51,7 +69,7 @@ func _process(delta):
 		var circle = circles[i]
 		var angleOfCurrentCircle = circle["angle"]
 		# Move the circle in the direction
-		circle["position"] += Vector2(sin(angleOfCurrentCircle), cos(angleOfCurrentCircle)) * speed * delta
+		circle["position"] += Vector2(cos(angleOfCurrentCircle), sin(angleOfCurrentCircle)) * speed * delta
 
 		# Check if the circle has reached the edge of the screen and teleport to the other side
 		if circle["position"].x > screen_size.x + radius:  # Exiting right
