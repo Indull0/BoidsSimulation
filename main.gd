@@ -9,7 +9,7 @@ var screen_size = Vector2(1920, 1080)  # Size of the window/screen
 var angle = 0
 var sight_radius = 125.0
 var directions = []
-var fov = PI / 2
+var fov = PI + PI / 2
 
 
 func draw_circle_arc_poly(center, radius, angle_from, angle_to, color):
@@ -40,13 +40,17 @@ func _ready():
 func _draw():
 	# Draw each circle
 	#for circle in circles:
+	var specialCircle = circles[5]
+	var from_angle = specialCircle["angle"] - fov / 2
+	var to_angle = specialCircle["angle"] + fov / 2
+	draw_circle_arc_poly(specialCircle["position"], sight_radius, from_angle, to_angle, Color(1, 1, 1, 0.1))
 	for i in range(circles.size()):
 		var circle = circles[i]
 		draw_circle(circle["position"], radius, circle["color"])
 		
-		var from_angle = circle["angle"] - fov / 2
-		var to_angle = circle["angle"] + fov / 2
-		draw_circle_arc_poly(circle["position"], sight_radius, from_angle, to_angle, Color(1, 1, 1, 0.1))
+		#var from_angle = circle["angle"] - fov / 2
+		#var to_angle = circle["angle"] + fov / 2
+		#draw_circle_arc_poly(circle["position"], sight_radius, from_angle, to_angle, Color(1, 1, 1, 0.1))
 	
 	
 		for j in range(circles.size()):
@@ -55,11 +59,13 @@ func _draw():
 			
 			var circleToCheck = circles[j]
 			var distanceBetweenCircles = circle["position"].distance_to(circleToCheck["position"])
-			var toCircleToCheck = circleToCheck["position"] - circle["position"]
-			var circleDirection = Vector2(cos(circle["angle"]), sin(circle["angle"]))
-			var angleToCircle = circleDirection.angle_to(toCircleToCheck.normalized())
 			
-			if (distanceBetweenCircles < sight_radius) && (angleToCircle < fov):
+			#var distanceToCircleToCheck = circleToCheck["position"] - circle["position"]
+			var currentCircleDirection = Vector2(cos(circle["angle"]), sin(circle["angle"]))
+			var toCheckCircleDirection = Vector2(cos(circleToCheck["angle"]), sin(circleToCheck["angle"]))
+			#var angleToCircle = circleDirection.angle_to(distanceToCircleToCheck)
+			var angleToCircle = currentCircleDirection.angle_to(toCheckCircleDirection)
+			if (distanceBetweenCircles < sight_radius) && (angleToCircle < fov) && i == 5:
 				draw_line(circle["position"], circleToCheck["position"], Color(1, 0, 0))
 
 func _process(delta):
