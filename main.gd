@@ -9,7 +9,7 @@ var screen_size = Vector2(1920, 1080)  # Size of the window/screen
 var angle = 0
 var sight_radius = 125.0
 var directions = []
-var fov = PI + PI / 2
+var fov = PI / 2
 
 
 func draw_circle_arc_poly(center, radius, angle_from, angle_to, color):
@@ -60,12 +60,13 @@ func _draw():
 			var circleToCheck = circles[j]
 			var distanceBetweenCircles = circle["position"].distance_to(circleToCheck["position"])
 			
+			#var toCheckCircleDirection = Vector2(cos(circleToCheck["angle"]), sin(circleToCheck["angle"]))
 			#var distanceToCircleToCheck = circleToCheck["position"] - circle["position"]
-			var currentCircleDirection = Vector2(cos(circle["angle"]), sin(circle["angle"]))
-			var toCheckCircleDirection = Vector2(cos(circleToCheck["angle"]), sin(circleToCheck["angle"]))
 			#var angleToCircle = circleDirection.angle_to(distanceToCircleToCheck)
-			var angleToCircle = currentCircleDirection.angle_to(toCheckCircleDirection)
-			if (distanceBetweenCircles < sight_radius) && (angleToCircle < fov) && i == 5:
+			var currentCircleDirection = Vector2(cos(circle["angle"]), sin(circle["angle"]))
+			var vectorBetweenCircles = (circleToCheck["position"] - circle["position"]).normalized()
+			var angleToCircle = currentCircleDirection.angle_to(vectorBetweenCircles)
+			if (distanceBetweenCircles < sight_radius) && (angleToCircle > -fov / 2) && (angleToCircle < fov / 2) && (i == 5):
 				draw_line(circle["position"], circleToCheck["position"], Color(1, 0, 0))
 
 func _process(delta):
@@ -73,9 +74,8 @@ func _process(delta):
 	for i in range(circles.size()):
 		#var direction = Vector2(randf(), randf())
 		var circle = circles[i]
-		var angleOfCurrentCircle = circle["angle"]
 		# Move the circle in the direction
-		circle["position"] += Vector2(cos(angleOfCurrentCircle), sin(angleOfCurrentCircle)) * speed * delta
+		circle["position"] += Vector2(cos(circle["angle"]), sin(circle["angle"])) * speed * delta
 
 		# Check if the circle has reached the edge of the screen and teleport to the other side
 		if circle["position"].x > screen_size.x + radius:  # Exiting right
