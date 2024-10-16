@@ -1,7 +1,7 @@
 extends Node2D
 
 # Variables for the circles
-var circle_count = 50  # Number of circles
+var circle_count = 75  # Number of circles
 var circles = []  # Array to store circle data (position, radius, color)
 var radius = 20  # Radius of each circle
 var speed = 150  # Movement speed in pixels per second
@@ -11,7 +11,7 @@ var sight_radius = 125.0
 var directions = []
 var fov = PI + PI / 2
 var turn_speed = PI / 12
-var avoidance_force = 0.2
+var avoidance_force = 0.15
 
 
 func draw_circle_arc_poly(center, radius, angle_from, angle_to, color):
@@ -25,6 +25,16 @@ func draw_circle_arc_poly(center, radius, angle_from, angle_to, color):
 		points_arc.push_back(center + Vector2(cos(angle_point), sin(angle_point)) * radius)
 	draw_polygon(points_arc, colors)
 
+func draw_triangle(position, angle, size, color):
+	var half_size = size / 2
+	# Define the vertices of the triangle based on the angle
+	var vertices = []
+	vertices.append(position + Vector2(cos(angle), sin(angle)) * size)  # Front tip
+	vertices.append(position + Vector2(cos(angle + 2*PI/3), sin(angle + 2*PI/3)) * half_size)  # Left base
+	vertices.append(position + Vector2(cos(angle - 2*PI/3), sin(angle - 2*PI/3)) * half_size)  # Right base
+	
+	# Draw the triangle
+	draw_polygon(PackedVector2Array(vertices), [color])
 
 func _ready():
 	# Generate circles with random positions
@@ -48,7 +58,8 @@ func _draw():
 	draw_circle_arc_poly(specialCircle["position"], sight_radius, from_angle, to_angle, Color(1, 1, 1, 0.1))
 	for i in range(circles.size()):
 		var circle = circles[i]
-		draw_circle(circle["position"], radius, circle["color"])
+		#draw_circle(circle["position"], radius, circle["color"])
+		draw_triangle(circle["position"], circle["angle"], radius, circle["color"])
 		var avoid_angle = 0.0
 	
 		for j in range(circles.size()):
@@ -62,7 +73,7 @@ func _draw():
 				var vectorBetweenCircles = (circleToCheck["position"] - circle["position"])
 				var angleToCircle = currentCircleDirection.angle_to(vectorBetweenCircles.normalized())
 				if abs(angleToCircle) < fov / 2:
-					avoid_angle -= sign(angleToCircle) * avoidance_force * (1 - distanceBetweenCircles / 125)# * (1 - distanceBetweenCircles / 125))
+					avoid_angle -= sign(angleToCircle) * avoidance_force * (1 - distanceBetweenCircles / 125) * (1 - angleToCircle / fov)# * (1 - distanceBetweenCircles / 125))
 					if i == 5:
 						draw_line(circle["position"], circleToCheck["position"], Color(1, 0, 0))
 				#if (abs(angleToCircle) > -fov / 2):
