@@ -4,14 +4,14 @@ extends Node2D
 var circle_count = 50  # Number of circles
 var circles = []  # Array to store circle data (position, radius, color)
 var radius = 20  # Radius of each circle
-var speed = 100  # Movement speed in pixels per second
+var speed = 150  # Movement speed in pixels per second
 var screen_size = Vector2(1920, 1080)  # Size of the window/screen
 var angle = 0
 var sight_radius = 125.0
 var directions = []
 var fov = PI + PI / 2
-var turn_speed = PI / 4
-var avoidance_force = 0.05
+var turn_speed = PI / 12
+var avoidance_force = 0.2
 
 
 func draw_circle_arc_poly(center, radius, angle_from, angle_to, color):
@@ -59,17 +59,17 @@ func _draw():
 			
 			if distanceBetweenCircles < sight_radius:
 				var currentCircleDirection = Vector2(cos(circle["angle"]), sin(circle["angle"]))
-				var vectorBetweenCircles = (circleToCheck["position"] - circle["position"]).normalized()
-				var angleToCircle = currentCircleDirection.angle_to(vectorBetweenCircles)
-				if (angleToCircle < fov / 2):
-					avoid_angle += sign(angleToCircle) * avoidance_force
+				var vectorBetweenCircles = (circleToCheck["position"] - circle["position"])
+				var angleToCircle = currentCircleDirection.angle_to(vectorBetweenCircles.normalized())
+				if abs(angleToCircle) < fov / 2:
+					avoid_angle -= sign(angleToCircle) * avoidance_force * (1 - distanceBetweenCircles / 125)# * (1 - distanceBetweenCircles / 125))
 					if i == 5:
 						draw_line(circle["position"], circleToCheck["position"], Color(1, 0, 0))
-				if (angleToCircle > -fov / 2):
-					avoid_angle -= sign(angleToCircle) * avoidance_force
-					if i == 5:
-						draw_line(circle["position"], circleToCheck["position"], Color(1, 0, 0))
-		circle["angle"] += avoid_angle * turn_speed
+				#if (abs(angleToCircle) > -fov / 2):
+					#avoid_angle += sign(angleToCircle) * avoidance_force
+					#if i == 5:
+						#draw_line(circle["position"], circleToCheck["position"], Color(1, 0, 0))
+		circle["angle"] += avoid_angle * turn_speed# * get_process_delta_time()
 
 
 func _process(delta):
