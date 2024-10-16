@@ -9,7 +9,9 @@ var screen_size = Vector2(1920, 1080)  # Size of the window/screen
 var angle = 0
 var sight_radius = 125.0
 var directions = []
-var fov = PI / 2
+var fov = PI + PI / 2
+var turn_speed = PI / 4
+var avoidance_force = 0.05
 
 
 func draw_circle_arc_poly(center, radius, angle_from, angle_to, color):
@@ -30,7 +32,7 @@ func _ready():
 		#angle = randf_range(0, TAU)
 		var circle_data = {
 			"position": Vector2(randi_range(0, screen_size.x), randi_range(0, screen_size.y)),  # Random position within screen area
-			"color": Color(1, 1, randf()),  # Random color
+			"color": Color(randf_range(50, 80) / 255, randf_range(80, 165) / 255, randf_range(200, 230) / 255, 1),  # Random color
 			"angle": randf_range(0, TAU)
 		}
 		circles.append(circle_data)
@@ -47,27 +49,28 @@ func _draw():
 	for i in range(circles.size()):
 		var circle = circles[i]
 		draw_circle(circle["position"], radius, circle["color"])
-		
-		#var from_angle = circle["angle"] - fov / 2
-		#var to_angle = circle["angle"] + fov / 2
-		#draw_circle_arc_poly(circle["position"], sight_radius, from_angle, to_angle, Color(1, 1, 1, 0.1))
-	
+		var avoid_angle = 0.0
 	
 		for j in range(circles.size()):
 			if i == j:
 				continue
-			
 			var circleToCheck = circles[j]
 			var distanceBetweenCircles = circle["position"].distance_to(circleToCheck["position"])
 			
-			#var toCheckCircleDirection = Vector2(cos(circleToCheck["angle"]), sin(circleToCheck["angle"]))
-			#var distanceToCircleToCheck = circleToCheck["position"] - circle["position"]
-			#var angleToCircle = circleDirection.angle_to(distanceToCircleToCheck)
-			var currentCircleDirection = Vector2(cos(circle["angle"]), sin(circle["angle"]))
-			var vectorBetweenCircles = (circleToCheck["position"] - circle["position"]).normalized()
-			var angleToCircle = currentCircleDirection.angle_to(vectorBetweenCircles)
-			if (distanceBetweenCircles < sight_radius) && (angleToCircle > -fov / 2) && (angleToCircle < fov / 2) && (i == 5):
-				draw_line(circle["position"], circleToCheck["position"], Color(1, 0, 0))
+			if distanceBetweenCircles < sight_radius:
+				var currentCircleDirection = Vector2(cos(circle["angle"]), sin(circle["angle"]))
+				var vectorBetweenCircles = (circleToCheck["position"] - circle["position"]).normalized()
+				var angleToCircle = currentCircleDirection.angle_to(vectorBetweenCircles)
+				if (angleToCircle < fov / 2):
+					avoid_angle += sign(angleToCircle) * avoidance_force
+					if i == 5:
+						draw_line(circle["position"], circleToCheck["position"], Color(1, 0, 0))
+				if (angleToCircle > -fov / 2):
+					avoid_angle -= sign(angleToCircle) * avoidance_force
+					if i == 5:
+						draw_line(circle["position"], circleToCheck["position"], Color(1, 0, 0))
+		circle["angle"] += avoid_angle * turn_speed
+
 
 func _process(delta):
 	# Move all circles in the fixed direction
