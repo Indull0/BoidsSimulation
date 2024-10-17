@@ -1,17 +1,18 @@
 extends Node2D
 
-# Variables for the circles
-var circle_count = 75  # Number of circles
-var circles = []  # Array to store circle data (position, radius, color)
-var radius = 20  # Radius of each circle
+# Variables for the boids
+var boid_count = 75  # Number of boids
+var boids = []  # Array to store boid data (position, radius, color)
+var radius = 20  # Radius of each boid
 var speed = 150  # Movement speed in pixels per second
 var screen_size = Vector2(1920, 1080)  # Size of the window/screen
 var angle = 0
-var sight_radius = 125.0
+var sight_radius = 150.0
 var directions = []
-var fov = PI + PI / 2
-var turn_speed = PI / 12
+var fov = PI + PI / 4
+var turn_speed = PI / 16
 var avoidance_force = 0.15
+var localCenterRadius = 200
 
 
 func draw_circle_arc_poly(center, radius, angle_from, angle_to, color):
@@ -37,75 +38,89 @@ func draw_triangle(position, angle, size, color):
 	draw_polygon(PackedVector2Array(vertices), [color])
 
 func _ready():
-	# Generate circles with random positions
-	for i in range(circle_count):
-		#angle = randf_range(0, TAU)
-		var circle_data = {
+	# Generate boids with random positions
+	for i in range(boid_count):
+		var boid_data = {
 			"position": Vector2(randi_range(0, screen_size.x), randi_range(0, screen_size.y)),  # Random position within screen area
 			"color": Color(randf_range(50, 80) / 255, randf_range(80, 165) / 255, randf_range(200, 230) / 255, 1),  # Random color
 			"angle": randf_range(0, TAU)
 		}
-		circles.append(circle_data)
+		boids.append(boid_data)
 	
 	set_process(true)
 
 func _draw():
-	# Draw each circle
-	#for circle in circles:
-	var specialCircle = circles[5]
-	var from_angle = specialCircle["angle"] - fov / 2
-	var to_angle = specialCircle["angle"] + fov / 2
-	draw_circle_arc_poly(specialCircle["position"], sight_radius, from_angle, to_angle, Color(1, 1, 1, 0.1))
-	for i in range(circles.size()):
-		var circle = circles[i]
-		#draw_circle(circle["position"], radius, circle["color"])
-		draw_triangle(circle["position"], circle["angle"], radius, circle["color"])
-		var avoid_angle = 0.0
+	# Draw vision cone for specific boid
+	var speicalBoid = boids[5]
+	var from_angle = speicalBoid["angle"] - fov / 2
+	var to_angle = speicalBoid["angle"] + fov / 2
+	draw_circle_arc_poly(speicalBoid["position"], sight_radius, from_angle, to_angle, Color(1, 1, 1, 0.1))
 	
-		for j in range(circles.size()):
-			if i == j:
-				continue
-			var circleToCheck = circles[j]
-			var distanceBetweenCircles = circle["position"].distance_to(circleToCheck["position"])
-			
-			if distanceBetweenCircles < sight_radius:
-				var currentCircleDirection = Vector2(cos(circle["angle"]), sin(circle["angle"]))
-				var vectorBetweenCircles = (circleToCheck["position"] - circle["position"])
-				var angleToCircle = currentCircleDirection.angle_to(vectorBetweenCircles.normalized())
-				if abs(angleToCircle) < fov / 2:
-					avoid_angle -= sign(angleToCircle) * avoidance_force * (1 - distanceBetweenCircles / 125) * (1 - angleToCircle / fov)# * (1 - distanceBetweenCircles / 125))
-					if i == 5:
-						draw_line(circle["position"], circleToCheck["position"], Color(1, 0, 0))
-				#if (abs(angleToCircle) > -fov / 2):
-					#avoid_angle += sign(angleToCircle) * avoidance_force
+	# Draw all boids
+	for i in range(boids.size()):
+		var boid = boids[i]
+		if i == 5: 
+			draw_triangle(boid["position"], boid["angle"], radius, Color(0.8, 0.3, 0.3))
+		else:
+			draw_triangle(boid["position"], boid["angle"], radius, boid["color"])
+		
 					#if i == 5:
-						#draw_line(circle["position"], circleToCheck["position"], Color(1, 0, 0))
-		circle["angle"] += avoid_angle * turn_speed# * get_process_delta_time()
+						#draw_line(boid["position"], boidToCheck["position"], Color(1, 0, 0))
+				#if (abs(angleToBoid) > -fov / 2):
+					#avoid_angle += sign(angleToBoid) * avoidance_force
+					#if i == 5:
+						#draw_line(boid["position"], boidToCheck["position"], Color(1, 0, 0))
+
 
 
 func _process(delta):
-	# Move all circles in the fixed direction
-	for i in range(circles.size()):
-		#var direction = Vector2(randf(), randf())
-		var circle = circles[i]
-		# Move the circle in the direction
-		circle["position"] += Vector2(cos(circle["angle"]), sin(circle["angle"])) * speed * delta
+	# Move all boids in the fixed direction
+	for i in range(boids.size()):
+		# Define/reset a couple useful variables
+		var boid = boids[i]
+		var avoid_angle = 0.0
+		var boidsInLocalRadius = 0
+		var currentBoidDirection = Vector2(cos(boid["angle"]), sin(boid["angle"]))
+		var centerOfFlock = Vector2(0.0, 0.0)
+		var angleToCenterOfFlock = 0.0
+		
+		# Move the boid in the direction
+		boid["position"] += Vector2(cos(boid["angle"]), sin(boid["angle"])) * speed * delta
+		# Check if the boid has reached the edge of the screen and teleport to the other side
+		if boid["position"].x > screen_size.x + radius:  # Exiting right
+			boid["position"].x = -radius  # Teleport to the left
+		elif boid["position"].x < -radius:  # Exiting left
+			boid["position"].x = screen_size.x + radius  # Teleport to the right
 
-		# Check if the circle has reached the edge of the screen and teleport to the other side
-		if circle["position"].x > screen_size.x + radius:  # Exiting right
-			circle["position"].x = -radius  # Teleport to the left
-		elif circle["position"].x < -radius:  # Exiting left
-			circle["position"].x = screen_size.x + radius  # Teleport to the right
-
-		if circle["position"].y > screen_size.y + radius:  # Exiting bottom
-			circle["position"].y = -radius  # Teleport to the top
-		elif circle["position"].y < -radius:  # Exiting top
-			circle["position"].y = screen_size.y + radius  # Teleport to the bottom
-		
-	#for i in range(circles.size()):
-		
-		
-		
+		if boid["position"].y > screen_size.y + radius:  # Exiting bottom
+			boid["position"].y = -radius  # Teleport to the top
+		elif boid["position"].y < -radius:  # Exiting top
+			boid["position"].y = screen_size.y + radius  # Teleport to the bottom
 	
-	# Request a redraw of the circles after moving them
+		for j in range(boids.size()):
+			# Don't check self
+			if i == j:
+				continue
+			
+			# Distance check
+			var boidToCheck = boids[j]
+			var distanceBetweenBoids = boid["position"].distance_to(boidToCheck["position"])
+			
+			# Logic for nudging boid to the center of the flock
+			if distanceBetweenBoids < localCenterRadius:
+				centerOfFlock += boidToCheck["position"]
+				boidsInLocalRadius += 1
+				
+				# Avoidance Logic
+				if distanceBetweenBoids < sight_radius:
+					var vectorBetweenBoids = (boidToCheck["position"] - boid["position"])
+					var angleToBoid = currentBoidDirection.angle_to(vectorBetweenBoids.normalized())
+					if abs(angleToBoid) < fov / 2:
+						avoid_angle -= sign(angleToBoid) * avoidance_force * (1 - distanceBetweenBoids / 125) * (1 - angleToBoid / fov)# * (1 - distanceBetweenBoids / 125))
+			
+		centerOfFlock = centerOfFlock / boidsInLocalRadius
+		angleToCenterOfFlock = currentBoidDirection.angle_to(centerOfFlock)
+		boid["angle"] += avoid_angle * turn_speed - angleToCenterOfFlock
+	
+	# Request a redraw of the boids after moving them
 	queue_redraw()
