@@ -13,7 +13,8 @@ var fov = PI + PI / 4
 var turn_speed = PI / 16
 var avoidance_force = 0.15
 var localCenterRadius = 200
-var centeringUrge = 0.015
+var centeringGlobalUrge = 0.005
+var centeringLocalUrge = 0.015
 
 
 func draw_circle_arc_poly(center, radius, angle_from, angle_to, color):
@@ -52,18 +53,18 @@ func _ready():
 
 func _draw():
 	# Draw vision cone for specific boid
-	var speicalBoid = boids[5]
-	var from_angle = speicalBoid["angle"] - fov / 2
-	var to_angle = speicalBoid["angle"] + fov / 2
-	draw_circle_arc_poly(speicalBoid["position"], sight_radius, from_angle, to_angle, Color(1, 1, 1, 0.1))
+	#var speicalBoid = boids[5]
+	#var from_angle = speicalBoid["angle"] - fov / 2
+	#var to_angle = speicalBoid["angle"] + fov / 2
+	#draw_circle_arc_poly(speicalBoid["position"], sight_radius, from_angle, to_angle, Color(1, 1, 1, 0.1))
 	
 	# Draw all boids
 	for i in range(boids.size()):
 		var boid = boids[i]
-		if i == 5: 
-			draw_triangle(boid["position"], boid["angle"], radius, Color(0.8, 0.3, 0.3))
-		else:
-			draw_triangle(boid["position"], boid["angle"], radius, boid["color"])
+		#if i == 5: 
+		#	draw_triangle(boid["position"], boid["angle"], radius, Color(0.8, 0.3, 0.3))
+		#else:
+		draw_triangle(boid["position"], boid["angle"], radius, boid["color"])
 		
 					#if i == 5:
 						#draw_line(boid["position"], boidToCheck["position"], Color(1, 0, 0))
@@ -82,8 +83,12 @@ func _process(delta):
 		var avoid_angle = 0.0
 		var boidsInLocalRadius = 0
 		var currentBoidDirection = Vector2(cos(boid["angle"]), sin(boid["angle"]))
-		var centerOfFlock = Vector2(0.0, 0.0)
-		var angleToCenterOfFlock = 0.0
+		var centerOfLocalFlock = Vector2(0.0, 0.0)
+		var angleToCenterOfLocalFlock = 0.0
+		
+		var boidsInGlobalRadius = 0
+		var centerOfGlobalFlock = Vector2(0.0, 0.0)
+		var angleToCenterOfGlobalFlock = 0.0
 		
 		# Move the boid in the direction
 		boid["position"] += Vector2(cos(boid["angle"]), sin(boid["angle"])) * speed * delta
@@ -102,15 +107,19 @@ func _process(delta):
 			# Don't check self
 			if i == j:
 				continue
-			
-			# Distance check
 			var boidToCheck = boids[j]
+			
+			centerOfGlobalFlock += boidToCheck["position"]
+			boidsInGlobalRadius += 1
+		
+			# Distance check
 			var distanceBetweenBoids = boid["position"].distance_to(boidToCheck["position"])
 			
 			# Logic for nudging boid to the center of the flock
 			if distanceBetweenBoids < localCenterRadius:
-				centerOfFlock += boidToCheck["position"]
+				centerOfLocalFlock += boidToCheck["position"]
 				boidsInLocalRadius += 1
+				
 				
 				# Avoidance Logic
 				if distanceBetweenBoids < sight_radius:
@@ -118,11 +127,19 @@ func _process(delta):
 					var angleToBoid = currentBoidDirection.angle_to(vectorBetweenBoids.normalized())
 					if abs(angleToBoid) < fov / 2:
 						avoid_angle -= sign(angleToBoid) * avoidance_force * (1 - distanceBetweenBoids / 125) * (1 - angleToBoid / fov)# * (1 - distanceBetweenBoids / 125))
+						
+		# Steer to local center
 		if boidsInLocalRadius > 0:
-			centerOfFlock /= boidsInLocalRadius
-			var vectorToCenterOfFlock = (centerOfFlock - boid["position"]).normalized()
-			angleToCenterOfFlock = currentBoidDirection.angle_to(vectorToCenterOfFlock)
-			boid["angle"] += angleToCenterOfFlock * centeringUrge
+			centerOfLocalFlock /= boidsInLocalRadius
+			var vectorToCenterOfLocalFlock = (centerOfLocalFlock - boid["position"]).normalized()
+			angleToCenterOfLocalFlock = currentBoidDirection.angle_to(vectorToCenterOfLocalFlock)
+			boid["angle"] += angleToCenterOfLocalFlock * centeringLocalUrge
+		# Steer to global center
+		if boidsInGlobalRadius > 0:
+			centerOfGlobalFlock /= boidsInGlobalRadius
+			var vectorToCenterOfGlobalFlock = (centerOfGlobalFlock - boid["position"]).normalized()
+			angleToCenterOfGlobalFlock = currentBoidDirection.angle_to(vectorToCenterOfGlobalFlock)
+			boid["angle"] += angleToCenterOfGlobalFlock * centeringGlobalUrge
 		
 		boid["angle"] += avoid_angle * turn_speed
 	
