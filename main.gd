@@ -13,6 +13,7 @@ var fov = PI + PI / 4
 var turn_speed = PI / 16
 var avoidance_force = 0.15
 var localCenterRadius = 200
+var centeringUrge = 0.05
 
 
 func draw_circle_arc_poly(center, radius, angle_from, angle_to, color):
@@ -117,10 +118,13 @@ func _process(delta):
 					var angleToBoid = currentBoidDirection.angle_to(vectorBetweenBoids.normalized())
 					if abs(angleToBoid) < fov / 2:
 						avoid_angle -= sign(angleToBoid) * avoidance_force * (1 - distanceBetweenBoids / 125) * (1 - angleToBoid / fov)# * (1 - distanceBetweenBoids / 125))
-			
-		centerOfFlock = centerOfFlock / boidsInLocalRadius
-		angleToCenterOfFlock = currentBoidDirection.angle_to(centerOfFlock)
-		boid["angle"] += avoid_angle * turn_speed - angleToCenterOfFlock
+		if boidsInLocalRadius > 0:
+			centerOfFlock /= boidsInLocalRadius
+			var vectorToCenterOfFlock = (centerOfFlock - boid["position"]).normalized()
+			angleToCenterOfFlock = currentBoidDirection.angle_to(vectorToCenterOfFlock)
+			boid["angle"] += angleToCenterOfFlock * centeringUrge
+		
+		boid["angle"] += avoid_angle * turn_speed
 	
 	# Request a redraw of the boids after moving them
 	queue_redraw()
