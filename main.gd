@@ -13,7 +13,7 @@ var fov = PI + PI / 4
 var turn_speed = PI / 16
 var avoidance_force = 0.15
 var localCenterRadius = 200
-var centeringUrge = 0.05
+var centeringUrge = 0.015
 
 
 func draw_circle_arc_poly(center, radius, angle_from, angle_to, color):
